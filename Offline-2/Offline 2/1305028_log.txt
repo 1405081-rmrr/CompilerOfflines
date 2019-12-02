@@ -1,0 +1,145 @@
+Line no 1: TOKEN <INT> Lexeme int found
+Line no 1: TOKEN <ID,main> Lexeme main  found
+18 --><main,ID>
+Line no 1: TOKEN <LPAREN> Lexeme ( found
+9 --><(,LPAREN>
+18 --><main,ID>
+Line no 1: TOKEN <RPAREN> Lexeme ) found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+18 --><main,ID>
+Line no 2: TOKEN <LCURL> Lexeme { found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <INT> Lexeme int found
+Line no 3: TOKEN <ID,i> Lexeme i  found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <COMMA> Lexeme , found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <ID,j> Lexeme j  found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <COMMA> Lexeme , found
+already exist
+Line no 3: TOKEN <ID,k> Lexeme k  found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <COMMA> Lexeme , found
+already exist
+Line no 3: TOKEN <ID,n> Lexeme n  found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID>
+18 --><main,ID>
+30 --><{,LCURL>
+Line no 3: TOKEN <SEMICOLON> Lexeme ; found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID>
+18 --><main,ID>
+28 --><;,SEMICOLON>
+30 --><{,LCURL>
+Line no 4: TOKEN <FOR> Lexeme for found
+Line no 4: TOKEN <LPAREN> Lexeme ( found
+already exist
+Line no 4: TOKEN <ID,i> Lexeme i  found
+already exist
+Line no 4: TOKEN <ASSIGNOP> Lexeme = found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID>
+18 --><main,ID>
+28 --><;,SEMICOLON>
+30 --><{,LCURL><=,ASSIGNOP>
+Line no 4: TOKEN <CONST_INT> Lexeme 0 found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID><0,CONST_INT>
+18 --><main,ID>
+28 --><;,SEMICOLON>
+30 --><{,LCURL><=,ASSIGNOP>
+Line no 4: TOKEN <SEMICOLON> Lexeme ; found
+already exist
+Line no 4: TOKEN <ID,i> Lexeme i  found
+already exist
+Line no 4: TOKEN <RELOP> Lexeme < found
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID><0,CONST_INT>
+18 --><main,ID>
+28 --><;,SEMICOLON>
+29 --><<,RELOP>
+30 --><{,LCURL><=,ASSIGNOP>
+Line no 4: TOKEN <ID,n> Lexeme n  found
+already exist
+Line no 4: TOKEN <SEMICOLON> Lexeme ; found
+already exist
+Line no 4: TOKEN <ID,i> Lexeme i  found
+already exist
+Line no 4: TOKEN <RPAREN> Lexeme ) found
+already exist
+Line no 5: TOKEN <ID,j> Lexeme j  found
+already exist
+Line no 5: TOKEN <ASSIGNOP> Lexeme = found
+already exist
+Line no 5: TOKEN <ID,i> Lexeme i  found
+already exist
+Line no 5: TOKEN <SEMICOLON> Lexeme ; found
+already exist
+Line no 6: TOKEN <ID,k> Lexeme k  found
+already exist
+Line no 6: TOKEN <ASSIGNOP> Lexeme = found
+already exist
+Line no 6: TOKEN <ID,j> Lexeme j  found
+already exist
+Line no 6: TOKEN <SEMICOLON> Lexeme ; found
+already exist
+Line no 8: TOKEN <RCURL> Lexeme } found
+1 --><},RCURL>
+9 --><(,LPAREN>
+10 --><),RPAREN>
+12 --><i,ID>
+13 --><,,COMMA><j,ID>
+14 --><k,ID>
+17 --><n,ID><0,CONST_INT>
+18 --><main,ID>
+28 --><;,SEMICOLON>
+29 --><<,RELOP>
+30 --><{,LCURL><=,ASSIGNOP>
+Total Lines : 9
+Total Errors : 0

@@ -1,0 +1,782 @@
+%option noyywrap
+%option yylineno
+
+%{
+#include<cstdio>
+#include<cstdlib>
+#include<string>
+#include<vector>
+
+using namespace std;
+
+int line_count=1;
+int err_count=0;
+int lcurl_count=0;
+
+FILE *logout;
+FILE *tokenout;
+
+/*class SymbolInfo{
+public:
+	string symbol;
+	string type;
+	SymbolInfo(){
+		symbol="";type="";
+	}
+	SymbolInfo(string symbol,string type){
+		this->symbol=symbol;this->type=type;
+	}
+};
+class ScopeTable{
+	vector<SymbolInfo *> syminfo;
+	public:
+	void insert(SymbolInfo *s){
+		syminfo.push_back(s);
+	}
+	void print(){
+		for(int i=0;i<syminfo.size();i++){
+			fprintf(logout,"\n%s %s\n",syminfo[i]->symbol.c_str(),syminfo[i]->type.c_str());
+		}
+	}
+};*/
+
+class SymbolInfo
+{
+    string Name, Type;
+
+public:
+
+    SymbolInfo *next_sym_info = NULL;
+
+    void set_info(string name, string type)
+    {
+        Name = name;
+        Type = type;
+    }
+
+    string get_name()
+    {
+        return Name;
+    }
+
+    string get_type()
+    {
+        return Type;
+    }
+};
+
+
+class ScopeTable
+{
+public:
+
+    int data_pos, data_idx, total_buckets, scope_table_no;
+    SymbolInfo **scope_table;
+    SymbolInfo *tmp_sym_info;
+    SymbolInfo *tmp_sym_info_1;
+    ScopeTable *parent_scope = NULL;
+
+    ScopeTable(int n)
+    {
+        total_buckets = n;
+
+        scope_table = new SymbolInfo *[total_buckets];
+        for(int i=0; i<total_buckets; i++) scope_table[i] = NULL;
+    }
+
+    int hash_func(string name)
+    {
+        int index = 0;
+
+        for(int i=0; i<name.size(); i++) index += name[i];
+
+        return index%total_buckets;
+    }
+
+    int find_data(string name)
+    {
+        for(int row=0; row<total_buckets; row++)
+        {
+            tmp_sym_info = scope_table[row];
+
+            int col = 0;
+            while(tmp_sym_info != NULL)
+            {
+                if(tmp_sym_info -> get_name() == name)
+                {
+                    data_pos = row;
+                    data_idx = col;
+                    return 1;
+                }
+                col++;
+                tmp_sym_info = tmp_sym_info -> next_sym_info;
+            }
+        }
+        return 0;
+    }
+
+    bool Insert(string name, string type)
+    {
+        if(find_data(name) == 1)
+        {
+            //fout<<" <"<<name<<","<<type<<"> "<<"already exists in current ScopeTable"<<"\n\n";
+            return false;
+        }
+
+        else
+        {
+            tmp_sym_info = new SymbolInfo;
+            int row = hash_func(name);
+            tmp_sym_info_1 = scope_table[row];
+
+            if(tmp_sym_info_1 == NULL)
+            {
+                tmp_sym_info -> set_info(name, type);
+                tmp_sym_info -> next_sym_info = NULL;
+                tmp_sym_info_1 = tmp_sym_info;
+                scope_table[row] = tmp_sym_info_1;
+
+                //fout<<" Inserted in ScopeTable# "<<scope_table_no<<" at position "<<row<<", 0"<<"\n\n";
+                return true;
+            }
+
+            else
+            {
+                int col = 1;
+                while(tmp_sym_info_1 -> next_sym_info != NULL)
+                {
+                    tmp_sym_info_1 = tmp_sym_info_1 -> next_sym_info;
+                    col++;
+                }
+
+                tmp_sym_info -> set_info(name, type);
+                tmp_sym_info -> next_sym_info = NULL;
+                tmp_sym_info_1 -> next_sym_info = tmp_sym_info;
+
+                //fout<<" Inserted in ScopeTable# "<<scope_table_no<<" at position "<<row<<", "<<col<<"\n\n";
+                return true;
+            }
+        }
+    }
+
+    SymbolInfo *Look_Up(string name)
+    {
+        if(find_data(name) == 1)
+        {
+            //fout<<" Found in ScopeTable# "<<scope_table_no<<" at position "<<data_pos<<", "<<data_idx<<"\n\n";
+            return tmp_sym_info;
+        }
+
+        else return NULL;
+    }
+
+    bool Delete(string name)
+    {
+        if(find_data(name) == 1)
+        {
+            tmp_sym_info_1 = scope_table[data_pos];
+
+            if(data_idx == 0)
+            {
+                scope_table[data_pos] = tmp_sym_info->next_sym_info;
+                delete tmp_sym_info;
+
+                //fout<<" Found in ScopeTable# "<<scope_table_no<<" at position "<<data_pos<<", "<<data_idx<<"\n\n";
+                //fout<<" Deleted entry at "<<data_pos<<", "<<data_idx<<" from current ScopeTable"<<"\n\n";
+                return true;
+            }
+
+            else
+            {
+                while(tmp_sym_info_1 != tmp_sym_info) tmp_sym_info_1 = tmp_sym_info_1->next_sym_info;
+
+                if(tmp_sym_info->next_sym_info == NULL)
+                {
+                    tmp_sym_info_1->next_sym_info = NULL;
+                    delete tmp_sym_info;
+
+                   // fout<<" Found in ScopeTable# "<<scope_table_no<<" at position "<<data_pos<<", "<<data_idx<<"\n\n";
+                    //fout<<" Deleted entry at "<<data_pos<<", "<<data_idx<<" from current ScopeTable"<<"\n\n";
+                    return true;
+                }
+
+                else
+                {
+                    tmp_sym_info_1->next_sym_info = tmp_sym_info->next_sym_info;
+                    delete tmp_sym_info;
+
+                    //fout<<" Found in ScopeTable# "<<scope_table_no<<" at position "<<data_pos<<", "<<data_idx<<"\n\n";
+                    //fout<<" Deleted entry at "<<data_pos<<", "<<data_idx<<" from current ScopeTable"<<"\n\n";
+                    return true;
+                }
+            }
+        }
+
+        else
+        {
+            //fout<<" Not found"<<"\n\n";
+            //fout<<" "<<name<<" Not found"<<"\n\n";
+            return false;
+        }
+    }
+
+    void Print()
+    {
+        //fout<<" ScopeTable # "<<scope_table_no<<endl;
+	fprintf(logout," ScopeTable # %d\n",scope_table_no);
+        
+	for(int row=0; row<total_buckets; row++)
+        {
+            tmp_sym_info = scope_table[row];
+            
+	    //fout<<" "<<row<<" --> ";
+	    if(tmp_sym_info != NULL) fprintf(logout," %d -->",row);
+
+            while(tmp_sym_info != NULL)
+            {
+                //fout<<"< "<<tmp_sym_info->get_name()<<" : "<<tmp_sym_info->get_type()<<" > ";
+		fprintf(logout," <%s, %s> ",tmp_sym_info->get_name().c_str(),tmp_sym_info->get_type().c_str());                
+		tmp_sym_info = tmp_sym_info->next_sym_info;
+		if(tmp_sym_info == NULL) fprintf(logout,"\n");
+            }
+	    //fout<<endl;
+            //fprintf(logout,"\n");
+        }
+	//fout<<endl;
+        fprintf(logout,"\n");
+    }
+};
+
+
+class SymbolTable
+{
+public:
+    ScopeTable *current_scope = NULL;
+    ScopeTable *temp_scope;
+    int total_buckets;
+    int scope_no;
+
+    SymbolTable()
+    {
+	total_buckets = 7;
+        scope_no = 1;
+
+	current_scope = new ScopeTable(total_buckets);
+        current_scope -> parent_scope = NULL;
+	current_scope -> scope_table_no = scope_no;
+    }
+
+    void Enter_Scope()
+    {
+        
+	scope_no++;
+
+	if(current_scope != NULL)
+	{
+	    temp_scope = new ScopeTable(total_buckets);
+	    temp_scope -> parent_scope = current_scope;
+	    current_scope = temp_scope;
+	}
+
+	else
+	{
+	    current_scope = new ScopeTable(total_buckets);
+	    current_scope -> parent_scope = NULL;
+	}
+
+	current_scope -> scope_table_no = scope_no;
+   	//if(scope_no != 1) fout<<" New ScopeTable with id "<<scope_no<<" created"<<"\n\n";
+    }
+
+    void Exit_Scope()
+    {
+        temp_scope = current_scope;
+        current_scope = current_scope -> parent_scope;
+        delete temp_scope;
+        //fout<<" ScopeTable with id "<<scope_no<<" removed"<<"\n\n";
+    }
+
+    bool Insert(string name, string type)
+    {	
+        return current_scope -> Insert(name, type);
+    }
+
+    bool Remove(string name)
+    {
+        return current_scope -> Delete(name);
+    }
+
+    SymbolInfo *Look_Up(string name)
+    {
+        temp_scope = current_scope;
+        SymbolInfo *tmp_sym_info_1;
+
+        while(temp_scope != NULL)
+        {
+            tmp_sym_info_1 = temp_scope -> Look_Up(name);
+
+            if(tmp_sym_info_1 != NULL) return tmp_sym_info_1;
+
+            temp_scope = temp_scope -> parent_scope;
+        }
+
+        //fout<<" Not Found"<<"\n\n";
+        return NULL;
+    }
+
+    void Print_Current_Scope_Table()
+    {
+        current_scope -> Print();
+    }
+
+    void Print_All_Scope_Table()
+    {
+        temp_scope = current_scope;
+
+        while(temp_scope != NULL)
+        {
+            temp_scope -> Print();
+            temp_scope = temp_scope -> parent_scope;
+        }
+    }
+};
+
+SymbolTable st;
+
+
+
+
+string convert_str(string str)
+{
+    string result=""; 
+    
+    for(int i=0; i<str.size(); i++)
+    {
+	     if(str[i] == '\\' && str[i+1] == 'b' )   {result += "\b"; i+=1;} 
+	else if(str[i] == '\\' && str[i+1] == 'r' )   {result += "\r"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == 't' )   {result += "\t"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == 'n' )   {result += "\n"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == 'v' )   {result += "\v"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == 'f' )   {result += "\f"; i+=1;}
+ 	
+	else if(str[i] == '\\' && str[i+1] == '\n')   {result +=  "" ; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == 'a' )   {result += "\a"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == '"' )   {result += "\""; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == '?' )   {result += "\?"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == '\\')   {result += "\\"; i+=1;}
+	else if(str[i] == '\\' && str[i+1] == '\'')   {result += "\'"; i+=1;}
+		
+	else if(str[i] == '\\') 		      {result +=  "" ;}
+	
+	else result += str[i];
+    }
+    return result;
+}
+
+
+string convert_char(string str)
+{
+    string result = "";
+    
+    if(str.size() == 3)    {result += str[1];}
+    
+    else if(str[1] == '\\' && str[2] == 'b' )   {result += "\b";} 
+    else if(str[1] == '\\' && str[2] == 'r' )   {result += "\r";}
+    else if(str[1] == '\\' && str[2] == 't' )   {result += "\t";}
+    else if(str[1] == '\\' && str[2] == 'n' )   {result += "\n";}
+    else if(str[1] == '\\' && str[2] == 'v' )   {result += "\v";}
+    else if(str[1] == '\\' && str[2] == 'f' )   {result += "\f";}
+ 	
+    else if(str[1] == '\\' && str[2] == 'a' )   {result += "\a";}
+    else if(str[1] == '\\' && str[2] == '"' )   {result += "\"";}
+    else if(str[1] == '\\' && str[2] == '?' )   {result += "\?";}
+    else if(str[1] == '\\' && str[2] == '\\')   {result += "\\";}
+    else if(str[1] == '\\' && str[2] == '\'')   {result += "\'";}
+		
+    return result;
+}
+
+
+%}
+
+WHITESPACE [ \t\f\r\v]+
+LETTER [a-zA-Z]
+DIGIT [0-9]
+NEWLINE [\n]
+
+INT {DIGIT}+
+FLOAT ({DIGIT}*\.{DIGIT}+([E][-+]?{DIGIT}+)?)
+CHAR '([ -~]{-}['\\])'
+CTRL_CHAR '\\([nt"afrbv0']|\\)'
+
+ID [a-zA-Z_][a-zA-Z0-9_]*
+
+SIN_STR (\"([^"\n]|\\.)*\")+
+MUL_STR \"(([^"\n]|\\.)*(\\\n)*)*\"
+
+SIN_COM "//"[^\n]*
+MUL_COM "/*"([^*]|(\*)+[^/*])*(\*)+"/"
+
+NOT_ID {DIGIT}+[a-zA-Z0-9_]*
+NOT_CHAR ('([ -~]{-}['\\])?)|('\\([nt"afrbv0']|\\))|('([ -~]{-}['])([ -~]{-}['])+)
+MULT_CHAR '([ -~]{-}['])([ -~]{-}['])+'
+DEC_ERR {DIGIT}*\.({DIGIT}*\.*)*
+ILL_NUM {DIGIT}*\.*{DIGIT}*[E][-+]?{DIGIT}+\.{DIGIT}*
+UNF_STR1 \"([^"\n]|\\.)*;*$
+UNF_STR2 \"(([^"\n]|\\.)*(\\\n)*)*;*$
+UNF_COM "/*"([^*]|(\*)+[^/*])*(\*)*
+
+%%
+
+{WHITESPACE} {}
+
+{NEWLINE} {line_count++;}
+
+
+"if"		{
+			fprintf(tokenout,"<IF> ");
+			fprintf(logout,"Line No. %d: TOKEN <IF> Lexeme %s found\n\n",yylineno,yytext);
+		}
+		
+"else"		{
+			fprintf(tokenout,"<ELSE> ");
+			fprintf(logout,"Line No. %d: TOKEN <ELSE> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"for"		{
+			fprintf(tokenout,"<FOR> ");
+			fprintf(logout,"Line No. %d: TOKEN <FOR> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"while"		{
+			fprintf(tokenout,"<WHILE> ");
+			fprintf(logout,"Line No. %d: TOKEN <WHILE> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"do"		{
+			fprintf(tokenout,"<DO> ");
+			fprintf(logout,"Line No. %d: TOKEN <DO> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"break"		{
+			fprintf(tokenout,"<BREAK> ");
+			fprintf(logout,"Line No. %d: TOKEN <BREAK> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"int"		{
+			fprintf(tokenout,"<INT> ");
+			fprintf(logout,"Line No. %d: TOKEN <INT> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"char"		{
+			fprintf(tokenout,"<CHAR> ");
+			fprintf(logout,"Line No. %d: TOKEN <CHAR> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"float"		{
+			fprintf(tokenout,"<FLOAT> ");
+			fprintf(logout,"Line No. %d: TOKEN <FLOAT> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"double"	{
+			fprintf(tokenout,"<DOUBLE> ");
+			fprintf(logout,"Line No. %d: TOKEN <DOUBLE> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"void"		{
+			fprintf(tokenout,"<VOID> ");
+			fprintf(logout,"Line No. %d: TOKEN <VOID> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"return"	{
+			fprintf(tokenout,"<RETURN> ");
+			fprintf(logout,"Line No. %d: TOKEN <RETURN> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"switch" 	{
+			fprintf(tokenout,"<SWITCH> ");
+			fprintf(logout,"Line No. %d: TOKEN <SWITCH> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"case"		{
+			fprintf(tokenout,"<CASE> ");
+			fprintf(logout,"Line No. %d: TOKEN <CASE> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"default" 	{
+			fprintf(tokenout,"<DEFAULT> ");
+			fprintf(logout,"Line No. %d: TOKEN <DEFAULT> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+"continue" 	{
+			fprintf(tokenout,"<CONTINUE> ");
+			fprintf(logout,"Line No. %d: TOKEN <CONTINUE> Lexeme %s found\n\n",yylineno,yytext);
+		}
+		
+
+
+{INT} 		{
+			fprintf(tokenout,"<CONST_INT, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <CONST_INT> Lexeme %s found\n\n",yylineno,yytext);
+			if(st.Insert(string(yytext),"CONST_INT")) st.Print_Current_Scope_Table();
+		}
+
+{FLOAT}		{
+			fprintf(tokenout,"<CONST_FLOAT, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <CONST_FLOAT> Lexeme %s found\n\n",yylineno,yytext);
+			if(st.Insert(string(yytext),"CONST_FLOAT")) st.Print_Current_Scope_Table();
+		}
+
+{CHAR}		{
+			fprintf(tokenout,"<CONST_CHAR, %s> ",convert_char(string(yytext)).c_str());
+			fprintf(logout,"Line No. %d: TOKEN <CONST_CHAR> Lexeme %s found\n\n",yylineno,yytext);
+			if(st.Insert(string(yytext),"CONST_CHAR")) st.Print_Current_Scope_Table();
+		}
+
+{CTRL_CHAR}	{
+			fprintf(tokenout,"<CONST_CHAR, %s> ",convert_char(string(yytext)).c_str());
+			fprintf(logout,"Line No. %d: TOKEN <CONST_CHAR> Lexeme %s found\n\n",yylineno,yytext);
+			if(st.Insert(string(yytext),"CONST_CHAR")) st.Print_Current_Scope_Table();
+		}
+
+
+{ID}		{	
+			fprintf(tokenout,"<ID, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <ID> Lexeme %s found\n\n",yylineno,yytext);
+			if(st.Insert(string(yytext),"ID")) st.Print_Current_Scope_Table();
+		}
+
+
+
+"+" 		| 
+
+"-"		{
+			fprintf(tokenout,"<ADDOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <ADDOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"ADDOP")) st.Print_Current_Scope_Table();
+		}
+
+"*" 		| 
+
+"/"		|
+
+"%"		{
+			fprintf(tokenout,"<MULOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <MULOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"MULOP")) st.Print_Current_Scope_Table();
+		}
+
+"++"		|
+
+"--"		{
+			fprintf(tokenout,"<INCOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <INCOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"INCOP")) st.Print_Current_Scope_Table();
+		}
+
+"<" 		|
+
+"<="		|
+
+">"		|
+
+">="		|
+
+"=="		|
+
+"!="		{
+			fprintf(tokenout,"<RELOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <RELOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"RELOP")) st.Print_Current_Scope_Table();
+		}
+
+"="		{
+			fprintf(tokenout,"<ASSIGNOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <ASSIGNOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"ASSIGNOP")) st.Print_Current_Scope_Table();
+		}
+
+"&&"		|
+
+"||"		{
+			fprintf(tokenout,"<LOGICOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <LOGICOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"LOGICOP")) st.Print_Current_Scope_Table();
+		}
+
+"&"		|
+
+"|"		|
+
+"^"		|
+
+"<<"		|
+
+">>"		{
+			fprintf(tokenout,"<BITOP, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <BITOP> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"BITOP")) st.Print_Current_Scope_Table();
+		}
+
+"!"		{
+			fprintf(tokenout,"<NOT, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <NOT> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"NOT")) st.Print_Current_Scope_Table();
+		}
+
+"("		{
+			fprintf(tokenout,"<LPAREN, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <LPAREN> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"LPAREN")) st.Print_Current_Scope_Table();
+		}
+
+")"		{
+			fprintf(tokenout,"<RPAREN, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <RPAREN> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"RPAREN")) st.Print_Current_Scope_Table();
+		}
+
+"{"		{
+			fprintf(tokenout,"<LCURL, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <LCURL> Lexeme %s found\n\n",yylineno,yytext);
+			lcurl_count++;
+			if(lcurl_count != 1) st.Enter_Scope();		
+			//if(st.Insert(string(yytext),"LCURL")) st.Print_Current_Scope_Table();
+		}
+
+"}"		{
+			fprintf(tokenout,"<RCURL, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <RCURL> Lexeme %s found\n\n",yylineno,yytext);
+			//st.Exit_Scope();		
+			//if(st.Insert(string(yytext),"RCURL")) st.Print_Current_Scope_Table();
+		}
+
+"["		{
+			fprintf(tokenout,"<LTHIRD, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <LTHIRD> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"LTHIRD")) st.Print_Current_Scope_Table();		
+		}
+
+"]"		{
+			fprintf(tokenout,"<RTHIRD, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <RTHIRD> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"RTHIRD")) st.Print_Current_Scope_Table();
+		}
+
+","		{
+			fprintf(tokenout,"<COMMA, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <COMMA> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"COMMA")) st.Print_Current_Scope_Table();
+		}
+
+";"		{
+			fprintf(tokenout,"<SEMICOLON, %s> ",yytext);
+			fprintf(logout,"Line No. %d: TOKEN <SEMICOLON> Lexeme %s found\n\n",yylineno,yytext);
+			//if(st.Insert(string(yytext),"SEMICOLON")) st.Print_Current_Scope_Table();
+		}
+
+
+
+{SIN_STR}	{
+			fprintf(tokenout,"<STRING, %s> ",convert_str(string(yytext)).c_str());
+			fprintf(logout,"Line No. %d: TOKEN <STRING> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+{MUL_STR}	{
+			fprintf(tokenout,"<STRING, %s> ",convert_str(string(yytext)).c_str());
+			fprintf(logout,"Line No. %d: TOKEN <STRING> Lexeme %s found\n\n",line_count,yytext);
+			line_count = yylineno;
+		}
+
+
+
+{SIN_COM}	{
+			fprintf(logout,"Line No. %d: TOKEN <COMMENT> Lexeme %s found\n\n",yylineno,yytext);
+		}
+
+{MUL_COM}	{
+			fprintf(logout,"Line No. %d: TOKEN <COMMENT> Lexeme %s found\n\n",line_count,yytext);
+			line_count = yylineno;
+		}
+
+
+
+{NOT_ID}  	{
+			fprintf(logout,"Error at line %d: Invalid prefix on ID or invalid suffix on Number %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+"''"		{
+			fprintf(logout,"Error at line %d: Empty character constant error %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+"'\\'"		{
+			fprintf(logout,"Error at line %d: Unterminated character %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{NOT_CHAR}	{
+			fprintf(logout,"Error at line %d: Unterminated character %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{MULT_CHAR}	{
+			fprintf(logout,"Error at line %d: Multi character constant error %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{DEC_ERR}  	{
+			fprintf(logout,"Error at line %d: Too many decimal point %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{ILL_NUM}  	{
+			fprintf(logout,"Error at line %d: Ill formed number %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{UNF_STR1}  	{
+			fprintf(logout,"Error at line %d: Unterminated String %s\n\n",yylineno,yytext);
+			err_count++;
+		}
+
+{UNF_STR2}  	{
+			fprintf(logout,"Error at line %d: Unterminated String %s\n\n",line_count,yytext);
+			line_count = yylineno;
+			err_count++;
+		}
+
+{UNF_COM}  	{
+			fprintf(logout,"Error at line %d: Unterminated comment %s\n\n",line_count,yytext);
+			line_count = yylineno;
+			err_count++;
+		}
+
+%%
+
+int main(int argc,char *argv[]){
+	
+	if(argc!=2){
+		printf("Please provide input file name and try again\n");
+		return 0;
+	}
+	
+	FILE *fin=fopen(argv[1],"r");
+	if(fin==NULL){
+		printf("Cannot open specified file\n");
+		return 0;
+	}
+	
+	logout = fopen("1405062_log.txt","w");
+	tokenout = fopen("1405062_token.txt","w");
+
+	yyin= fin;
+	yylex();
+	st.Print_All_Scope_Table();
+	fprintf(logout,"Total Lines: %d\nTotal Errors: %d",yylineno-1,err_count);
+	fclose(yyin);
+	fclose(tokenout);
+	fclose(logout);
+	return 0;
+}
